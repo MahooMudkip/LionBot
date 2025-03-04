@@ -3,7 +3,7 @@ from haystack.dataclasses import ChatMessage
 from haystack import Document, Pipeline
 from haystack.document_stores.in_memory import InMemoryDocumentStore
 from haystack.dataclasses import Document
-from haystack.components.retrievers import InMemoryEmbeddingRetriever, InMemoryBM25Retriever
+from haystack.components.retrievers import InMemoryEmbeddingRetriever, InMemoryBM25Retriever, SentenceWindowRetriever
 # Use ChromaRetriever when scaling?
 from haystack_integrations.components.embedders.mistral.document_embedder import MistralDocumentEmbedder
 from haystack_integrations.components.embedders.mistral.text_embedder import MistralTextEmbedder
@@ -44,12 +44,10 @@ knowledge = [Document(content="Enigma's first album is called \"MCMXC a.D.\", re
 #     Embedding function
 
 document_embedder = MistralDocumentEmbedder()
-documents_with_embeddings = document_embedder.run(knowledge)['documents']
-document_store.write_documents(knowledge)
-text_embedder = MistralTextEmbedder()
+documents_with_embeddings = document_embedder.run(knowledge)
+document_store.write_documents(documents_with_embeddings["documents"])
+text_embedder = MistralTextEmbedder(api_key=Secret.from_env_var("MISTRAL_API_KEY"))
 retriever = InMemoryEmbeddingRetriever(document_store=document_store)
-llm = MistralChatGenerator(streaming_callback=print_streaming_chunk)
-
 
 
 prompt_template = """
@@ -62,29 +60,32 @@ prompt_template = """
     Answer:
 """
 
-chat_prompt_template = [ChatMessage.from_user("Given the context {{knowledge}}, answer the question {{query}}: ")]
+chat_prompt_template = [ChatMessage.from_user(prompt_template)]
 
-prompt_builder = PromptBuilder(template=prompt_template)
-chat_prompt_builder = ChatPromptBuilder()
+# prompt_builder = PromptBuilder(template=prompt_template)
+chat_prompt_builder = ChatPromptBuilder(template=chat_prompt_template, variables=["documents"])
 
 # rag_pipeline.add_component("embedder", embedder)
 rag_pipeline.add_component("embedder", text_embedder)
 rag_pipeline.add_component("retriever", retriever)
-rag_pipeline.add_component("prompt_builder", prompt_builder)
+rag_pipeline.add_component("prompt_builder", chat_prompt_builder)
 rag_pipeline.add_component("generator", generator)
 
 rag_pipeline.connect("embedder.embedding", "retriever.query_embedding")
 rag_pipeline.connect("retriever.documents", "prompt_builder.documents")
-rag_pipeline.connect("prompt_builder.prompt", "generator.messages")
+rag_pipeline.connect("prompt_builder", "generator.messages")
 
 # rag_pipeline.draw(path="/Users/gn30jo/Library/CloudStorage/OneDrive-ING/Desktop/LionBot/lionbot_prototype.png")
 
 query = ""
 
-print("Hi! I am the LionBot. Ask me a question!\n\nType \exit to leave at anytime.\n\n")
+print("\nHi! I am the LionBot. Ask me a question!\n\nType \exit to leave at anytime.\n")
 
-while query != "\exit":
-    query = input("Query: ")
+while True:
+    query = input("\nQuery: ")
+
+    if query == "\exit":
+        break
 
     # res=rag_pipeline.run({
     #     "embedder": {
@@ -99,8 +100,7 @@ while query != "\exit":
 
     res = rag_pipeline.run(
     {
-        "text_embedder": {"text": query},
-        "prompt_builder": {"template_variables": {"query": query}, "template": chat_prompt_template},
-        "llm": {"generation_kwargs": {"max_tokens": 165}},
+        "embedder": {"text": query},
+        "prompt_builder": {"template_variables": {"query": query}, "template": chat_prompt_template}
     })
-    print(res)
+    print()
