@@ -1,4 +1,4 @@
-import random, os, time
+import os
 from haystack.dataclasses import ChatMessage
 from haystack import Document, Pipeline
 from haystack.document_stores.in_memory import InMemoryDocumentStore
@@ -50,14 +50,8 @@ text_embedder = MistralTextEmbedder(api_key=Secret.from_env_var("MISTRAL_API_KEY
 retriever = InMemoryEmbeddingRetriever(document_store=document_store)
 
 
-# prompt_template = """
-#     Answer the following question based on the contents of the article: {{query}}
-#     Article: {{documents[0].content}}
-# """
-
 prompt_template = """
     Given the following context, answer the question.
-    Do not provide an answer to any questions that are not related to the context.
     Context:
     {% for doc in documents %}
         {{ doc.content }}
@@ -91,22 +85,7 @@ while True:
     query = input("\nQuery: ")
 
     if query == "\exit":
-        print("Thanks for chatting! See you next time!\n")
         break
-    elif query == "":
-        reply = random.randint(0,3)
-        if reply == 0:
-            print("That's not a query...\n")
-        elif reply == 1:
-            print("You do know how to ask a question, right?\n")
-        elif reply == 2:
-            print("You're not fooling me with that...\n")
-        elif reply == 3:
-            print("You think an empty query is funny? Watch this.\n")
-            time.sleep(3)
-            print("\n"*25)
-            print("Do it again and I'll flush your screen even more.\n")
-        continue
 
     # res=rag_pipeline.run({
     #     "embedder": {

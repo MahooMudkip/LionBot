@@ -21,6 +21,7 @@ template = """
 {% endfor %}
 
 Please answer the question based on the given information from local documentation.
+Do not answer any questions that are not related to the context or the content.
 
 {{question}}
 """

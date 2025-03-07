@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from haystack import Pipeline
 from haystack.components.converters import PyPDFToDocument
@@ -7,7 +8,7 @@ from haystack.document_stores.types import DuplicatePolicy
 from haystack.document_stores.in_memory import InMemoryDocumentStore
 
 document_store = InMemoryDocumentStore()
-converter = PyPDFToDocument()
+# converter = PyPDFToDocument()
 cleaner = DocumentCleaner()
 splitter = DocumentSplitter(split_by="sentence", split_length=10, split_overlap=2)
 writer = DocumentWriter(document_store=document_store, policy=DuplicatePolicy.SKIP)
@@ -22,5 +23,4 @@ indexing_pipeline.connect("converter", "cleaner")
 indexing_pipeline.connect("cleaner", "splitter")
 indexing_pipeline.connect("splitter", "writer")
 
-indexing_pipeline.run({"converter": {"sources": [Path("content/dune-part-two.pdf")]}})
-# indexing_pipeline.run({"converter": {"sources": [Path("content/dune-part-two.pdf"), Path("content/nebula.pdf")]}})
+# indexing_pipeline.run({"converter": {"sources": [Path("content/dune-part-two.pdf"), Path("content/nebula.pdf"), Path("content/tasm3.pdf")]}})
